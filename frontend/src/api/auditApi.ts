@@ -39,3 +39,18 @@ export const runDatasetAudit = async (
   if (!response.ok) throw new Error("Failed to run dataset audit");
   return response.json();
 };
+
+export const runLeakageAudit = async (
+  projectId: number
+): Promise<ModuleOutput> => {
+  const response = await fetch(`${API_BASE}/audit/leakage/${projectId}`, {
+    method: "POST",
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.detail || "Failed to run leakage audit");
+  }
+  
+  return response.json();
+};

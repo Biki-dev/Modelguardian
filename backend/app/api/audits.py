@@ -11,6 +11,8 @@ from app.models.project import Project
 from app.models.audit_run import AuditRun
 
 from app.modules.dataset_audit.runner import DatasetAuditRunner
+from app.modules.leakage.runner import LeakageRunner
+from app.storage.files import get_dataset_path
 
 router = APIRouter(
     prefix="/audit",
@@ -40,23 +42,7 @@ def run_dataset_audit(
     # Find uploaded csv
     # -----------------------------------------
 
-    project_folder = UPLOAD_DIR / f"project_{project_id}"
-
-    if not project_folder.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="No uploaded dataset found",
-        )
-
-    csv_files = list(project_folder.glob("*.csv"))
-
-    if len(csv_files) == 0:
-        raise HTTPException(
-            status_code=404,
-            detail="CSV dataset not found",
-        )
-
-    dataset_path = csv_files[0]
+    dataset_path = get_dataset_path(project_id)
 
     # -----------------------------------------
     # Run audit
@@ -88,5 +74,42 @@ def run_dataset_audit(
     # -----------------------------------------
     # Return response
     # -----------------------------------------
+
+    return result
+
+@router.post("/leakage/{project_id}")
+def run_leakage_audit(
+    project_id: int,
+    session: Session = Depends(get_session),
+):
+    project = session.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if not project.target_column:
+        raise HTTPException(
+            status_code=400,
+            detail="Leakage audit requires a target_column to be set on the project",
+        )
+
+    dataset_path = get_dataset_path(project_id)
+
+    runner = LeakageRunner()
+    result = runner.run(
+        file_path=str(dataset_path),
+        target_column=project.target_column,
+    )
+
+    audit = AuditRun(
+        project_id=project.id,
+        module_name="leakage",
+        status=result.status,
+        score=result.score,
+        severity=result.severity,
+        result_json=result.model_dump_json(),
+    )
+
+    session.add(audit)
+    session.commit()
 
     return result
