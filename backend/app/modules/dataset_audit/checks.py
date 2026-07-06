@@ -200,6 +200,7 @@ def check_label_imbalance(
         .value_counts(normalize=True)
         .to_dict()
     )
+    distribution = {str(k): v for k, v in distribution.items()}
 
     smallest = min(distribution.values())
 

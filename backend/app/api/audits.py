@@ -12,7 +12,9 @@ from app.models.audit_run import AuditRun
 
 from app.modules.dataset_audit.runner import DatasetAuditRunner
 from app.modules.leakage.runner import LeakageRunner
+from app.modules.fairness.runner import FairnessRunner
 from app.storage.files import get_dataset_path
+from app.schemas.audits import FairnessAuditRequest
 
 router = APIRouter(
     prefix="/audit",
@@ -103,6 +105,46 @@ def run_leakage_audit(
     audit = AuditRun(
         project_id=project.id,
         module_name="leakage",
+        status=result.status,
+        score=result.score,
+        severity=result.severity,
+        result_json=result.model_dump_json(),
+    )
+
+    session.add(audit)
+    session.commit()
+
+    return result
+
+@router.post("/fairness/{project_id}")
+def run_fairness_audit(
+    project_id: int,
+    request: FairnessAuditRequest,
+    session: Session = Depends(get_session),
+):
+    project = session.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if not project.target_column:
+        raise HTTPException(
+            status_code=400,
+            detail="Fairness audit requires a target_column to be set on the project",
+        )
+
+    dataset_path = get_dataset_path(project_id)
+
+    runner = FairnessRunner()
+    result = runner.run(
+        file_path=str(dataset_path),
+        target_column=project.target_column,
+        prediction_column=request.prediction_column,
+        sensitive_column=request.sensitive_column,
+    )
+
+    audit = AuditRun(
+        project_id=project.id,
+        module_name="fairness",
         status=result.status,
         score=result.score,
         severity=result.severity,

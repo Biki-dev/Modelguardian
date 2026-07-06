@@ -54,3 +54,33 @@ export const runLeakageAudit = async (
   
   return response.json();
 };
+
+export const getProjectColumns = async (projectId: number): Promise<string[]> => {
+  const response = await fetch(`${API_BASE}/projects/${projectId}/columns`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch project columns");
+  }
+  return response.json();
+};
+
+export const runFairnessAudit = async (
+  projectId: number,
+  predictionColumn: string,
+  sensitiveColumn: string
+): Promise<ModuleOutput> => {
+  const response = await fetch(`${API_BASE}/audit/fairness/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      prediction_column: predictionColumn,
+      sensitive_column: sensitiveColumn,
+    }),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.detail || "Failed to run fairness audit");
+  }
+  
+  return response.json();
+};

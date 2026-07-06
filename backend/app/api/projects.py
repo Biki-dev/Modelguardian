@@ -4,7 +4,7 @@ from sqlmodel import Session
 from app.core.db import get_session
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectRead
-from app.storage.files import save_upload_file
+from app.storage.files import save_upload_file, get_dataset_path, load_csv
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -38,3 +38,17 @@ def upload_project_file(
         "filename": file.filename,
         "saved_path": saved_path,
     }
+
+
+@router.get("/{project_id}/columns", response_model=list[str])
+def get_project_columns(
+    project_id: int,
+    session: Session = Depends(get_session),
+):
+    project = session.get(Project, project_id)
+    if not project:
+        return {"error": "Project not found"}
+        
+    dataset_path = get_dataset_path(project_id)
+    df = load_csv(str(dataset_path))
+    return df.columns.tolist()
