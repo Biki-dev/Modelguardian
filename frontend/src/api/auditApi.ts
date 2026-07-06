@@ -84,3 +84,23 @@ export const runFairnessAudit = async (
   
   return response.json();
 };
+
+export const runExplainabilityAudit = async (
+  projectId: number,
+  sampleRowIndex: number = 0
+): Promise<ModuleOutput> => {
+  const response = await fetch(`${API_BASE}/audit/explainability/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sample_row_index: sampleRowIndex,
+    }),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.detail || "Failed to run explainability audit");
+  }
+  
+  return response.json();
+};

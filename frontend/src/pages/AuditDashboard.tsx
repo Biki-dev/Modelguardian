@@ -3,7 +3,8 @@ import { useParams, Link } from "react-router-dom";
 import { DatasetAuditTab } from "../components/modules/DatasetAudit/DatasetAuditTab";
 import { LeakageTab } from "../components/modules/Leakage/LeakageTab";
 import { FairnessTab } from "../components/modules/Fairness/FairnessTab";
-import { Database, ShieldAlert, Scale, Activity } from "lucide-react";
+import { ExplainabilityTab } from "../components/modules/Explainability/ExplainabilityTab";
+import { Database, ShieldAlert, Scale, Activity, Eye } from "lucide-react";
 
 export const AuditDashboard: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +15,7 @@ export const AuditDashboard: React.FC = () => {
     { id: "dataset", label: "Dataset Audit", icon: Database },
     { id: "leakage", label: "Data Leakage", icon: ShieldAlert },
     { id: "fairness", label: "Fairness", icon: Scale },
+    { id: "explainability", label: "Explainability", icon: Eye },
     { id: "robustness", label: "Robustness", icon: Activity, disabled: true },
   ];
 
@@ -75,6 +77,7 @@ export const AuditDashboard: React.FC = () => {
             {activeTab === "dataset" && <DatasetAuditTab projectId={projectId} />}
             {activeTab === "leakage" && <LeakageTab projectId={projectId} />}
             {activeTab === "fairness" && <FairnessTab projectId={projectId} />}
+            {activeTab === "explainability" && <ExplainabilityTab projectId={projectId} />}
             {/* Future tabs will go here */}
           </div>
         </div>

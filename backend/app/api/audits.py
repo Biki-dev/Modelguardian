@@ -13,8 +13,9 @@ from app.models.audit_run import AuditRun
 from app.modules.dataset_audit.runner import DatasetAuditRunner
 from app.modules.leakage.runner import LeakageRunner
 from app.modules.fairness.runner import FairnessRunner
+from app.modules.explainability.runner import ExplainabilityRunner
 from app.storage.files import get_dataset_path
-from app.schemas.audits import FairnessAuditRequest
+from app.schemas.audits import FairnessAuditRequest, ExplainabilityAuditRequest
 
 router = APIRouter(
     prefix="/audit",
@@ -145,6 +146,45 @@ def run_fairness_audit(
     audit = AuditRun(
         project_id=project.id,
         module_name="fairness",
+        status=result.status,
+        score=result.score,
+        severity=result.severity,
+        result_json=result.model_dump_json(),
+    )
+
+    session.add(audit)
+    session.commit()
+
+    return result
+
+@router.post("/explainability/{project_id}")
+def run_explainability_audit(
+    project_id: int,
+    request: ExplainabilityAuditRequest,
+    session: Session = Depends(get_session),
+):
+    project = session.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if not project.target_column:
+        raise HTTPException(
+            status_code=400,
+            detail="Explainability audit requires a target_column to be set on the project",
+        )
+
+    dataset_path = get_dataset_path(project_id)
+
+    runner = ExplainabilityRunner()
+    result = runner.run(
+        file_path=str(dataset_path),
+        target_column=project.target_column,
+        sample_row_index=request.sample_row_index,
+    )
+
+    audit = AuditRun(
+        project_id=project.id,
+        module_name="explainability",
         status=result.status,
         score=result.score,
         severity=result.severity,
